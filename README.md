@@ -59,8 +59,8 @@ UI.png → Main interface preview
 
 ## 🔗 Deployment
 
-Deployed using GitHub Pages:
-https://shahdnazzal.github.io/Aura/
+Deployed using vercal : 
+https://aura-lac-three.vercel.app/
 
 ---
 
