@@ -56,9 +56,7 @@ export function AuthForm() {
   return (
     <div className="animate-fade-up relative z-10 w-full max-w-md">
       <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-2 h-40 w-40 animate-float">
-          <AvatarSVG config={DEFAULT_AVATAR} progress={60} showAura />
-        </div>
+        
         <h1 className="font-mono-label text-sm tracking-[0.4em] text-primary glow-text">◈ AURA</h1>
         <p className="mt-3 text-balance font-heading text-2xl font-semibold text-foreground">
           Evolve your self, one goal at a time
