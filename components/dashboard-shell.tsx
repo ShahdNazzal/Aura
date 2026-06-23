@@ -14,6 +14,7 @@ import { CardsPanel } from "@/components/cards-panel"
 import { ReflectionsPanel } from "@/components/reflections-panel"
 import { AvatarStudio } from "@/components/avatar-studio"
 import { StatsPanel } from "@/components/stats-panel"
+import { ChatPanel } from "@/components/chat-panel"
 
 export function DashboardShell({ userId, email }: { userId: string; email: string }) {
   const router = useRouter()
@@ -82,7 +83,14 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
         </div>
       </div>
 
-     
+      {/* Hint when empty */}
+      {!data.loading && data.cards.length === 0 && !panel && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            Tap <span className="text-foreground">Cards</span> to plant your first seed of growth.
+          </p>
+        </div>
+      )}
 
       {/* Side panel */}
       <div
@@ -113,6 +121,7 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
             {panel === "reflect" && <ReflectionsPanel data={data} />}
             {panel === "avatar" && <AvatarStudio data={data} />}
             {panel === "stats" && <StatsPanel data={data} />}
+            {panel === "chat" && <ChatPanel />}
           </div>
         )}
       </div>

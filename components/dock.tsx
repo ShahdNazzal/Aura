@@ -2,13 +2,14 @@
 
 import { Layers, Sparkles, Moon, BarChart3 } from "lucide-react"
 
-export type PanelKey = "cards" | "reflect" | "avatar" | "stats"
+export type PanelKey = "cards" | "reflect" | "avatar" | "stats" | "chat"
 
 const ITEMS: { key: PanelKey; label: string; icon: typeof Layers }[] = [
   { key: "cards", label: "Cards", icon: Layers },
   { key: "reflect", label: "Reflect", icon: Moon },
   { key: "avatar", label: "Avatar", icon: Sparkles },
   { key: "stats", label: "Stats", icon: BarChart3 },
+  { key: "chat", label: "Chat", icon: BarChart3 },
 ]
 
 export function Dock({
