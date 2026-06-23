@@ -20,16 +20,11 @@ Aura is an interactive self-growth web app that visualizes personal progress thr
 ## 📸 Screenshots
 
 ### Avatar System
-![Avatar](avatar.png)
+![Avatar](public/avatar.png)
 
 ### Login Page
-![Login](log_in.png)
+![Login](public/log_in.png)
 
-### Sign In Page
-![Sign In](sign_in.png)
-
-### Main UI
-![UI](UI.png)
 
 ---
 
