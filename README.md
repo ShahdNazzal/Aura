@@ -2,7 +2,7 @@
 
 Aura is an interactive self-growth web app that visualizes personal progress through dynamic life cards and an evolving digital avatar that reflects the user’s habits, goals, and transformation in real time.
 
-🌐 Live Website: https://shahdnazzal.github.io/Aura/
+🌐 Live Website: https://aura-lac-three.vercel.app/
 
 ---
 
