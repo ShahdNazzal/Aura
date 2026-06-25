@@ -1,5 +1,7 @@
 "use client"
 
+// C:\Users\lenovo\Downloads\build-aura-gamified-platform\components\dashboard-shell.tsx
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, X } from "lucide-react"
@@ -21,12 +23,29 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
   const data = useAuraData(userId)
   const [panel, setPanel] = useState<PanelKey | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
+  const [liveCards, setLiveCards] = useState<LifeCard[]>([])
+
+  const mergedCards = [
+    ...data.cards.filter((c) => !liveCards.find((l) => l.id === c.id)),
+    ...liveCards,
+  ]
 
   const mood = MOODS.find((m) => m.id === data.avatar.mood) ?? MOODS[0]
 
   function openCard(card: LifeCard) {
     setSelectedCardId(card.id)
     setPanel("cards")
+  }
+
+  function handleNewCard(card: LifeCard) {
+    setLiveCards((prev) => {
+      if (prev.find((c) => c.id === card.id)) return prev
+      return [...prev, card]
+    })
+  }
+
+  function handleDeleteLiveCard(cardId: string) {
+    setLiveCards((prev) => prev.filter((c) => c.id !== cardId))
   }
 
   async function signOut() {
@@ -63,17 +82,21 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
 
       {/* Center stage */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <OrbitCards cards={data.cards} onSelect={openCard} />
+        <OrbitCards cards={mergedCards} onSelect={openCard} />
 
         <div className="relative z-10 flex flex-col items-center">
           <div className="w-56 sm:w-64 md:w-72 aura-float">
             {data.loading ? (
               <div className="aspect-[3/4] w-full animate-pulse rounded-3xl bg-secondary/40" />
             ) : (
-              <AvatarSVG config={data.avatar} progress={data.overallProgress} showAura className="w-full" />
+              <AvatarSVG
+                config={data.avatar}
+                progress={data.overallProgress}
+                showAura
+                className="w-full"
+              />
             )}
           </div>
-
           <div className="mt-2 text-center">
             <p className="font-mono-label text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
               Aura Level
@@ -83,8 +106,8 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
         </div>
       </div>
 
-      {/* Hint when empty */}
-      {!data.loading && data.cards.length === 0 && !panel && (
+      {/* Hint when no cards */}
+      {!data.loading && mergedCards.length === 0 && !panel && (
         <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 text-center">
           <p className="text-sm text-muted-foreground">
             Tap <span className="text-foreground">Cards</span> to plant your first seed of growth.
@@ -111,22 +134,30 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
             >
               <X className="h-5 w-5" />
             </button>
+
             {panel === "cards" && (
               <CardsPanel
                 data={data}
                 selectedCardId={selectedCardId}
                 onClearSelection={() => setSelectedCardId(null)}
+                liveCards={liveCards}
+                onDeleteLiveCard={handleDeleteLiveCard}
               />
             )}
             {panel === "reflect" && <ReflectionsPanel data={data} />}
             {panel === "avatar" && <AvatarStudio data={data} />}
             {panel === "stats" && <StatsPanel data={data} />}
-            {panel === "chat" && <ChatPanel />}
+            {panel === ("chat" as PanelKey) && (
+              <ChatPanel
+                userId={userId}
+                onNewCard={handleNewCard}
+              />
+            )}
           </div>
         )}
       </div>
 
-      {/* Backdrop */}
+      {/* Backdrop (mobile) */}
       {panel && (
         <button
           type="button"
@@ -139,7 +170,10 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
         />
       )}
 
-      <Dock active={panel} onSelect={(key) => setPanel((p) => (p === key ? null : key))} />
+      <Dock
+        active={panel}
+        onSelect={(key) => setPanel((p) => (p === key ? null : key))}
+      />
     </main>
   )
 }

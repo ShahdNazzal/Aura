@@ -1,5 +1,7 @@
 "use client"
 
+// C:\Users\lenovo\Downloads\build-aura-gamified-platform\components\cards-panel.tsx
+
 import { useState } from "react"
 import { Plus, Trash2, Check, X, Circle, CheckCircle2 } from "lucide-react"
 import { CATEGORY_COLORS, type CardCategory, type LifeCard } from "@/lib/types"
@@ -13,17 +15,32 @@ export function CardsPanel({
   data,
   selectedCardId,
   onClearSelection,
+  liveCards = [],
+  onDeleteLiveCard,
 }: {
   data: Data
   selectedCardId: string | null
   onClearSelection: () => void
+  liveCards?: LifeCard[]
+  onDeleteLiveCard?: (cardId: string) => void
 }) {
   const { cards, createCard, deleteCard, addTask, toggleTask, deleteTask } = data
+
+  async function handleDelete(cardId: string) {
+    await deleteCard(cardId)
+    onDeleteLiveCard?.(cardId)
+  }
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState<CardCategory>("mind")
   const [description, setDescription] = useState("")
   const [taskInputs, setTaskInputs] = useState<Record<string, string>>({})
+
+  // دمج الكروت الجديدة مع الكروت من Supabase بدون تكرار
+  const mergedCards: LifeCard[] = [
+    ...cards.filter((c) => !liveCards.find((l) => l.id === c.id)),
+    ...liveCards,
+  ]
 
   async function submitCard(e: React.FormEvent) {
     e.preventDefault()
@@ -50,12 +67,12 @@ export function CardsPanel({
           <p className="text-xs text-muted-foreground">Areas of growth you orbit around</p>
         </div>
         <button
-  type="button"
-  onClick={() => setCreating((v) => !v)}
-  className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 mr-6"
->
-  <Plus className="h-4 w-4" /> New
-</button>
+          type="button"
+          onClick={() => setCreating((v) => !v)}
+          className="mr-6 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" /> New
+        </button>
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
@@ -110,7 +127,7 @@ export function CardsPanel({
           </form>
         )}
 
-        {cards.length === 0 && !creating && (
+        {mergedCards.length === 0 && !creating && (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <p className="text-sm text-muted-foreground">No Life Cards yet.</p>
             <p className="text-xs text-muted-foreground">
@@ -119,14 +136,14 @@ export function CardsPanel({
           </div>
         )}
 
-        {cards.map((card) => (
+        {mergedCards.map((card) => (
           <CardItem
             key={card.id}
             card={card}
             highlighted={card.id === selectedCardId}
-            onDelete={() => deleteCard(card.id)}
+            onDelete={() => handleDelete(card.id)}
             onToggleTask={(taskId) => {
-              const task = card.tasks.find(t => t.id === taskId)
+              const task = (card.tasks ?? []).find((t) => t.id === taskId)
               toggleTask(card.id, taskId, !task?.is_done)
             }}
             onDeleteTask={(taskId) => deleteTask(card.id, taskId)}
@@ -163,6 +180,7 @@ function CardItem({
   onFocus: () => void
 }) {
   const color = CATEGORY_COLORS[card.category] ?? "#8a99b3"
+
   return (
     <div
       className="glass rounded-xl p-4 transition"
@@ -182,10 +200,7 @@ function CardItem({
             <span className="font-mono-label text-[10px] text-muted-foreground">
               {card.category}
             </span>
-            <span
-              className="font-mono-label text-[10px]"
-              style={{ color }}
-            >
+            <span className="font-mono-label text-[10px]" style={{ color }}>
               {card.status}
             </span>
           </div>
@@ -208,14 +223,20 @@ function CardItem({
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
           <div
             className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${card.progress}%`, backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+            style={{
+              width: `${card.progress}%`,
+              backgroundColor: color,
+              boxShadow: `0 0 8px ${color}`,
+            }}
           />
         </div>
-        <span className="font-mono-label text-xs tabular-nums text-foreground">{card.progress}%</span>
+        <span className="font-mono-label text-xs tabular-nums text-foreground">
+          {card.progress}%
+        </span>
       </div>
 
       <ul className="mt-3 space-y-1.5">
-        {card.tasks.map((task) => (
+        {(card.tasks ?? []).map((task) => (
           <li key={task.id} className="group flex items-center gap-2">
             <button
               type="button"
@@ -230,7 +251,9 @@ function CardItem({
               )}
             </button>
             <span
-              className={`flex-1 text-sm ${task.is_done ? "text-muted-foreground line-through" : "text-foreground"}`}
+              className={`flex-1 text-sm ${
+                task.is_done ? "text-muted-foreground line-through" : "text-foreground"
+              }`}
             >
               {task.text}
             </span>
