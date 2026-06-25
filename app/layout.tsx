@@ -4,6 +4,10 @@ import { Outfit, Space_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import './globals.css'
 
+
+
+
+
 const outfit = Outfit({ variable: '--font-outfit', subsets: ['latin'] })
 const spaceMono = Space_Mono({
   variable: '--font-space-mono',
@@ -23,29 +27,23 @@ export const viewport: Viewport = {
   themeColor: '#020509',
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+
+
+
+
+
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`dark ${outfit.variable} ${spaceMono.variable} bg-background`}
-    >
+    <html lang="en" className={`dark ${outfit.variable} ${spaceMono.variable} bg-background`}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0f172a" />
+      </head>
+
       <body className="font-sans antialiased">
         {children}
-        <Toaster
-          position="top-center"
-          theme="dark"
-          toastOptions={{
-            style: {
-              background: '#111a2e',
-              border: '1px solid rgba(79,143,255,0.2)',
-              color: '#dde8ff',
-            },
-          }}
-        />
+        <Toaster />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
