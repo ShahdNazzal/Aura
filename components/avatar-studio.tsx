@@ -11,6 +11,7 @@ import {
   type BodyType,
   type EyeShape,
   type FaceShape,
+  type Gender,
   type HairStyle,
   type Mood,
   type OutfitStyle,
@@ -19,6 +20,7 @@ import type { useAuraData } from "@/lib/use-aura-data"
 
 type Data = ReturnType<typeof useAuraData>
 
+const GENDERS: Gender[] = ["male", "female"]
 const FACE_SHAPES: FaceShape[] = ["round", "oval", "square", "sharp"]
 const EYE_SHAPES: EyeShape[] = ["round", "sharp", "soft"]
 const HAIR_STYLES: HairStyle[] = ["short", "long", "curly", "fade", "bun", "futuristic", "none"]
@@ -32,7 +34,7 @@ export function AvatarStudio({ data }: { data: Data }) {
   function update<K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) {
     const next = { ...draft, [key]: value }
     setDraft(next)
-    setAvatar(next) // live preview on the main canvas
+    setAvatar(next)
   }
 
   function toggleAccessory(key: keyof AvatarConfig["accessories"]) {
@@ -42,6 +44,13 @@ export function AvatarStudio({ data }: { data: Data }) {
     }
     setDraft(next)
     setAvatar(next)
+  }
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -3 : 3
+    const nextBuild = Math.max(0, Math.min(100, draft.buildScale + delta))
+    update("buildScale", nextBuild)
   }
 
   return (
@@ -54,28 +63,52 @@ export function AvatarStudio({ data }: { data: Data }) {
         <button
           type="button"
           onClick={() => saveAvatar(draft)}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+          className="mr-6 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
           Save
         </button>
       </header>
 
       <div className="flex-1 overflow-y-auto px-5 py-4">
-        <div className="mx-auto mb-4 w-full max-w-52">
-          <div className="glass rounded-2xl p-2">
+        <div
+          className="mx-auto mb-4 w-full max-w-52 relative cursor-ns-resize"
+          onWheel={handleWheel}
+          style={{ touchAction: "none" }}
+        >
+          <div className="glass rounded-2xl p-2 overflow-hidden">
             <AvatarSVG config={draft} progress={overallProgress} showAura className="w-full" />
           </div>
+          <span className="absolute bottom-3 right-3 text-[10px] text-muted-foreground bg-background/50 px-2 py-1 rounded-full pointer-events-none">
+            Scroll to Scale Build
+          </span>
         </div>
 
         <div className="space-y-5">
+          <Section title="Gender">
+            <div className="flex flex-wrap gap-2">
+              {GENDERS.map((g) => (
+                <Chip key={g} active={draft.gender === g} onClick={() => update("gender", g)}>
+                  {g}
+                </Chip>
+              ))}
+            </div>
+          </Section>
+
+          <Section title={`Build Scale · ${draft.buildScale}%`}>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={draft.buildScale}
+              onChange={(e) => update("buildScale", Number(e.target.value))}
+              className="aura-range w-full"
+            />
+          </Section>
+
           <Section title="Mood">
             <div className="flex flex-wrap gap-2">
               {MOODS.map((m) => (
-                <Chip
-                  key={m.id}
-                  active={draft.mood === m.id}
-                  onClick={() => update("mood", m.id as Mood)}
-                >
+                <Chip key={m.id} active={draft.mood === m.id} onClick={() => update("mood", m.id as Mood)}>
                   {m.label}
                 </Chip>
               ))}
@@ -145,6 +178,8 @@ export function AvatarStudio({ data }: { data: Data }) {
   )
 }
 
+/* ───────────────────── sub-components ───────────────────── */
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -156,15 +191,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -180,15 +207,7 @@ function Chip({
   )
 }
 
-function ChipRow<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: T[]
-  value: T
-  onChange: (v: T) => void
-}) {
+function ChipRow<T extends string>({ options, value, onChange }: { options: T[]; value: T; onChange: (v: T) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((o) => (
@@ -200,15 +219,7 @@ function ChipRow<T extends string>({
   )
 }
 
-function Swatches({
-  colors,
-  value,
-  onChange,
-}: {
-  colors: string[]
-  value: string
-  onChange: (v: string) => void
-}) {
+function Swatches({ colors, value, onChange }: { colors: string[]; value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
       {colors.map((c) => (

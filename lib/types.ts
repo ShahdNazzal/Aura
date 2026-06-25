@@ -1,5 +1,6 @@
 export type CardCategory = "mind" | "body" | "soul" | "habits" | "lifestyle" | "custom"
 export type CardStatus = "active" | "improving" | "completed"
+export type Gender = "male" | "female"
 
 export interface Task {
   id: string
@@ -35,6 +36,8 @@ export type OutfitStyle = "casual" | "sporty" | "formal" | "futuristic" | "minim
 export type Mood = "energized" | "flowing" | "focused" | "reflective" | "inspired" | "calm"
 
 export interface AvatarConfig {
+  gender: Gender
+  buildScale: number
   faceShape: FaceShape
   skinTone: string
   eyeShape: EyeShape
@@ -118,6 +121,8 @@ export const MOODS: { id: Mood; label: string; symbol: string }[] = [
 ]
 
 export const DEFAULT_AVATAR: AvatarConfig = {
+  gender: "male",
+  buildScale: 50,
   faceShape: "oval",
   skinTone: "#E0AC69",
   eyeShape: "round",

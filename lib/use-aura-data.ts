@@ -188,14 +188,27 @@ export function useAuraData(userId: string) {
     [supabase, syncCardProgress],
   )
 
-  /* ---------------- Reflections ---------------- */
+     /* ---------------- Reflections ---------------- */
   const addReflection = useCallback(
-    async (content: string) => {
+    async (content: string, reminder_time: string | null = null) => {
+      // 1. نجهز البيانات الأساسية (النص عادي جداً)
+      const payload: Record<string, any> = { 
+        user_id: userId, 
+        content: content 
+      };
+
+      // 2. نضيف وقت التنبيه "فقط" إذا كان المستخدم قد اختار وقت، 
+      // وهيك لو العمود غير موجود في الداتا بيز ما رح يعطي خطأ وما رح يخرب الحفظ
+      if (reminder_time) {
+        payload.reminder_time = reminder_time;
+      }
+
       const { data, error } = await supabase
         .from("reflections")
-        .insert({ user_id: userId, content })
+        .insert(payload)
         .select()
         .single()
+        
       if (error || !data) {
         toast.error("Could not save reflection")
         return
@@ -207,10 +220,11 @@ export function useAuraData(userId: string) {
   )
 
   const deleteReflection = useCallback(
-    async (id: string) => {
-      setReflections((prev) => prev.filter((r) => r.id !== id))
-      await supabase.from("reflections").delete().eq("id", id)
-      toast.success("Reflection deleted")
+    async (reflectionId: string) => {
+      setReflections((prev) => prev.filter((r) => r.id !== reflectionId))
+      const { error } = await supabase.from("reflections").delete().eq("id", reflectionId)
+      if (error) toast.error("Could not delete reflection")
+      else toast.success("Reflection removed")
     },
     [supabase],
   )
@@ -218,7 +232,6 @@ export function useAuraData(userId: string) {
   /* ---------------- Avatar ---------------- */
   const saveAvatar = useCallback(
     async (config: AvatarConfig) => {
-      setAvatar(config)
       const { error } = await supabase.from("avatar_state").upsert(
         {
           user_id: userId,
@@ -230,8 +243,12 @@ export function useAuraData(userId: string) {
         },
         { onConflict: "user_id" },
       )
-      if (error) toast.error("Could not save avatar")
-      else toast.success("Avatar saved")
+      if (error) {
+        toast.error("Could not save avatar")
+        return
+      }
+      setAvatar(config)
+      toast.success("Avatar saved")
     },
     [supabase, userId],
   )

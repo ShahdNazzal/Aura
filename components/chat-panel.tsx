@@ -138,19 +138,19 @@ export function ChatPanel({
           <p className="text-xs text-white/40">Self-growth companion</p>
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-xs text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Online
-          </span>
-          {messages.length > 0 && (
-            <button
-              onClick={clearChat}
-              className="text-[10px] text-white/30 hover:text-red-400 transition-colors px-2 py-1 rounded border border-white/10 hover:border-red-400/40"
-            >
-              Clear
-            </button>
-          )}
-        </div>
+  <span className="mr-6 flex items-center gap-1.5 text-xs text-emerald-400">
+    <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+    Online
+  </span>
+  {messages.length > 0 && (
+    <button
+      onClick={clearChat}
+      className="mr-6 text-[10px] text-white/30 hover:text-red-400 transition-colors px-2 py-1 rounded border border-white/10 hover:border-red-400/40"
+    >
+      Clear
+    </button>
+  )}
+</div>
       </div>
 
       {/* ── Messages area ── */}
