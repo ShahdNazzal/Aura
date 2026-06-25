@@ -31,41 +31,48 @@ export function useAuraData(userId: string) {
   const [avatar, setAvatar] = useState<AvatarConfig>(DEFAULT_AVATAR)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let active = true
-    async function load() {
-      const [cardsRes, tasksRes, reflRes, avatarRes] = await Promise.all([
-        supabase.from("cards").select("*").eq("user_id", userId).order("created_at"),
-        supabase.from("tasks").select("*"),
-        supabase.from("reflections").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-        supabase.from("avatar_state").select("*").eq("user_id", userId).maybeSingle(),
-      ])
-      if (!active) return
+  const load = useCallback(async () => {
+    const [cardsRes, tasksRes, reflRes, avatarRes] = await Promise.all([
+      supabase.from("cards").select("*").eq("user_id", userId).order("created_at"),
+      supabase.from("tasks").select("*"),
+      supabase.from("reflections").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("avatar_state").select("*").eq("user_id", userId).maybeSingle(),
+    ])
 
-      const tasksByCard = new Map<string, Task[]>()
-      for (const t of (tasksRes.data ?? []) as Task[]) {
-        const arr = tasksByCard.get(t.card_id) ?? []
-        arr.push(t)
-        tasksByCard.set(t.card_id, arr)
-      }
-
-      const loadedCards: LifeCard[] = ((cardsRes.data ?? []) as LifeCard[]).map((c) => ({
-        ...c,
-        tasks: tasksByCard.get(c.id) ?? [],
-      }))
-
-      setCards(loadedCards)
-      setReflections((reflRes.data ?? []) as Reflection[])
-      if (avatarRes.data?.avatar_config && Object.keys(avatarRes.data.avatar_config).length > 0) {
-        setAvatar({ ...DEFAULT_AVATAR, ...(avatarRes.data.avatar_config as AvatarConfig) })
-      }
-      setLoading(false)
+    const tasksByCard = new Map<string, Task[]>()
+    for (const t of (tasksRes.data ?? []) as Task[]) {
+      const arr = tasksByCard.get(t.card_id) ?? []
+      arr.push(t)
+      tasksByCard.set(t.card_id, arr)
     }
-    load()
-    return () => {
-      active = false
+
+    const loadedCards: LifeCard[] = ((cardsRes.data ?? []) as LifeCard[]).map((c) => ({
+      ...c,
+      tasks: tasksByCard.get(c.id) ?? [],
+    }))
+
+    setCards(loadedCards)
+    setReflections((reflRes.data ?? []) as Reflection[])
+    if (avatarRes.data?.avatar_config && Object.keys(avatarRes.data.avatar_config).length > 0) {
+      setAvatar({ ...DEFAULT_AVATAR, ...(avatarRes.data.avatar_config as AvatarConfig) })
     }
+    setLoading(false)
   }, [supabase, userId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const refresh = useCallback(() => {
+    load()
+  }, [load])
+
+  const addLiveCard = useCallback((card: LifeCard) => {
+    setCards((prev) => {
+      if (prev.find((c) => c.id === card.id)) return prev
+      return [...prev, { ...card, tasks: card.tasks ?? [] }]
+    })
+  }, [])
 
   /* ---------------- Cards ---------------- */
   const createCard = useCallback(
@@ -250,5 +257,7 @@ export function useAuraData(userId: string) {
     addReflection,
     deleteReflection,
     saveAvatar,
+    refresh,
+    addLiveCard,
   }
 }

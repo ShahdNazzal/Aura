@@ -1,7 +1,5 @@
 "use client"
 
-// C:\Users\lenovo\Downloads\build-aura-gamified-platform\components\dashboard-shell.tsx
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, X } from "lucide-react"
@@ -23,12 +21,6 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
   const data = useAuraData(userId)
   const [panel, setPanel] = useState<PanelKey | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
-  const [liveCards, setLiveCards] = useState<LifeCard[]>([])
-
-  const mergedCards = [
-    ...data.cards.filter((c) => !liveCards.find((l) => l.id === c.id)),
-    ...liveCards,
-  ]
 
   const mood = MOODS.find((m) => m.id === data.avatar.mood) ?? MOODS[0]
 
@@ -38,14 +30,7 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
   }
 
   function handleNewCard(card: LifeCard) {
-    setLiveCards((prev) => {
-      if (prev.find((c) => c.id === card.id)) return prev
-      return [...prev, card]
-    })
-  }
-
-  function handleDeleteLiveCard(cardId: string) {
-    setLiveCards((prev) => prev.filter((c) => c.id !== cardId))
+    data.addLiveCard(card)
   }
 
   async function signOut() {
@@ -82,7 +67,7 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
 
       {/* Center stage */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <OrbitCards cards={mergedCards} onSelect={openCard} />
+        <OrbitCards cards={data.cards} onSelect={openCard} />
 
         <div className="relative z-10 flex flex-col items-center">
           <div className="w-56 sm:w-64 md:w-72 aura-float">
@@ -107,7 +92,7 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
       </div>
 
       {/* Hint when no cards */}
-      {!data.loading && mergedCards.length === 0 && !panel && (
+      {!data.loading && data.cards.length === 0 && !panel && (
         <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 text-center">
           <p className="text-sm text-muted-foreground">
             Tap <span className="text-foreground">Cards</span> to plant your first seed of growth.
@@ -140,8 +125,6 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
                 data={data}
                 selectedCardId={selectedCardId}
                 onClearSelection={() => setSelectedCardId(null)}
-                liveCards={liveCards}
-                onDeleteLiveCard={handleDeleteLiveCard}
               />
             )}
             {panel === "reflect" && <ReflectionsPanel data={data} />}

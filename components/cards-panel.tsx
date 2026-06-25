@@ -38,9 +38,9 @@ export function CardsPanel({
 
   // دمج الكروت الجديدة مع الكروت من Supabase بدون تكرار
   const mergedCards: LifeCard[] = [
-    ...cards.filter((c) => !liveCards.find((l) => l.id === c.id)),
-    ...liveCards,
-  ]
+  ...cards,
+  ...liveCards.filter((l) => !cards.find((c) => c.id === l.id)),
+]
 
   async function submitCard(e: React.FormEvent) {
     e.preventDefault()
@@ -157,6 +157,7 @@ export function CardsPanel({
     </div>
   )
 }
+
 
 function CardItem({
   card,
@@ -295,3 +296,4 @@ function CardItem({
     </div>
   )
 }
+
