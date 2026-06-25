@@ -6,6 +6,9 @@ import type { useAuraData } from "@/lib/use-aura-data"
 
 type Data = ReturnType<typeof useAuraData>
 
+
+
+
 const PROMPTS = [
   "What gave you energy today?",
   "What is one small win you can celebrate?",
@@ -87,6 +90,12 @@ export function ReflectionsPanel({ data }: { data: Data }) {
     alarmsRef.current.set(id, timeoutId)
   }
 
+
+
+const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied">(
+  typeof window !== "undefined" ? Notification.permission : "default"
+)
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!content.trim()) return
@@ -94,6 +103,8 @@ export function ReflectionsPanel({ data }: { data: Data }) {
     let finalReminderTime: string | null = null
 
     // إذا اختار المستخدم وقتاً للمنبه
+
+     
     if (reminderTime) {
       
       
@@ -101,10 +112,24 @@ export function ReflectionsPanel({ data }: { data: Data }) {
 
 
 
-      if (!hasPermission) {
-        alert("لا يمكننا ضبط المنبه بدون السماح بالإشعارات!")
-        return
-      }
+      if (Notification.permission !== "granted") {
+  alert("فعّلي الإشعارات من الزر أو من إعدادات المتصفح")
+  return
+}
+        
+      
+      
+
+
+
+      
+      
+      
+      
+
+
+
+
       finalReminderTime = new Date(reminderTime).toISOString()
     }
 
@@ -131,17 +156,30 @@ export function ReflectionsPanel({ data }: { data: Data }) {
 
 
 
-
-
-
 <button
   type="button"
-  onClick={requestPermission}
-  className="mb-3 rounded-lg bg-black px-3 py-2 text-white text-sm"
->
-  Enable Notifications
-</button>
+  onClick={async () => {
+    const permission = await Notification.requestPermission()
+    setNotifStatus(permission)
 
+    if (permission === "denied") {
+      alert("افتحي إعدادات المتصفح وفعّلي الإشعارات لهذا الموقع")
+    }
+  }}
+  className={`mb-3 rounded-lg px-3 py-2 text-white text-sm ${
+    notifStatus === "granted"
+      ? "bg-green-600"
+      : notifStatus === "denied"
+      ? "bg-red-600"
+      : "bg-black"
+  }`}
+>
+  {notifStatus === "granted"
+    ? "Notifications ON"
+    : notifStatus === "denied"
+    ? "Notifications BLOCKED"
+    : "Enable Notifications"}
+</button>
 
 
 
