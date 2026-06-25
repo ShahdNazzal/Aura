@@ -29,9 +29,6 @@ function toLocalDatetimeString(date: Date) {
   return local.toISOString().slice(0, 16)
 }
 
-const supportsNotifications =
-  typeof window !== "undefined" && "Notification" in window
-
 export function ReflectionsPanel({ data }: { data: Data }) {
   const { reflections, addReflection, deleteReflection } = data
   const [content, setContent] = useState("")
@@ -39,9 +36,16 @@ export function ReflectionsPanel({ data }: { data: Data }) {
   const [prompt] = useState(() => PROMPTS[Math.floor(Math.random() * PROMPTS.length)])
   const alarmsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
-  const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported">(
-    supportsNotifications ? Notification.permission : "unsupported"
-  )
+  const [notifStatus, setNotifStatus] = useState<"default" | "granted" | "denied" | "unsupported">("default")
+
+  // نحدد الحالة بعد ما الصفحة تفتح (client-side فقط)
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setNotifStatus("unsupported")
+    } else {
+      setNotifStatus(Notification.permission as "default" | "granted" | "denied")
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -51,10 +55,13 @@ export function ReflectionsPanel({ data }: { data: Data }) {
   }, [])
 
   async function requestPermission(): Promise<boolean> {
-    if (!supportsNotifications) return false
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      alert("Your browser does not support notifications. Reminders won't fire, but your reflection will still be saved.")
+      return false
+    }
     if (Notification.permission === "granted") return true
     const permission = await Notification.requestPermission()
-    setNotifStatus(permission)
+    setNotifStatus(permission as "default" | "granted" | "denied")
     return permission === "granted"
   }
 
@@ -69,7 +76,7 @@ export function ReflectionsPanel({ data }: { data: Data }) {
       return
     }
     const timeoutId = setTimeout(() => {
-      if (supportsNotifications && Notification.permission === "granted") {
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
         new Notification("Reminder from Aura ✨", {
           body: text.length > 100 ? text.substring(0, 100) + "..." : text,
           tag: id,
@@ -87,17 +94,14 @@ export function ReflectionsPanel({ data }: { data: Data }) {
     let finalReminderTime: string | null = null
 
     if (reminderTime) {
-      if (!supportsNotifications) {
-        alert("Your browser does not support notifications.")
-      } else {
-        const granted = await requestPermission()
-        if (!granted) {
-          alert("Please enable notifications from your browser settings to use reminders.")
-          return
-        }
+      const granted = await requestPermission()
+      if (granted) {
         finalReminderTime = new Date(reminderTime).toISOString()
         const tempId = `temp-${Date.now()}`
         scheduleAlarm(tempId, finalReminderTime, content.trim())
+      } else {
+        // حتى لو ما في إشعارات، نحفظ الريفلكشن بدون reminder
+        finalReminderTime = null
       }
     }
 
@@ -110,31 +114,38 @@ export function ReflectionsPanel({ data }: { data: Data }) {
     <div className="flex h-full flex-col">
       <header className="border-b border-border/60 px-5 py-4">
 
-        {/* زر الإشعارات — بيظهر بس إذا المتصفح يدعم الإشعارات */}
-        {notifStatus !== "unsupported" && (
-          <button
-            type="button"
-            onClick={async () => {
-              const granted = await requestPermission()
-              if (!granted && Notification.permission === "denied") {
-                alert("Notifications are blocked. Please enable them manually from your browser settings.")
-              }
-            }}
-            className={`mb-3 rounded-lg px-3 py-2 text-white text-sm transition ${
-              notifStatus === "granted"
-                ? "bg-green-600"
-                : notifStatus === "denied"
-                ? "bg-red-600"
-                : "bg-black hover:bg-gray-800"
-            }`}
-          >
-            {notifStatus === "granted"
-              ? "✅ Notifications ON"
+        {/* زر الإشعارات — دايماً يظهر */}
+        <button
+          type="button"
+          onClick={async () => {
+            if (typeof window === "undefined" || !("Notification" in window)) {
+              alert("Your browser does not support notifications. This feature is not available on your device.")
+              return
+            }
+            const permission = await Notification.requestPermission()
+            setNotifStatus(permission as "default" | "granted" | "denied")
+            if (permission === "denied") {
+              alert("Notifications are blocked. Please enable them manually from your browser settings.")
+            }
+          }}
+          className={`mb-3 rounded-lg px-3 py-2 text-white text-sm transition ${
+            notifStatus === "granted"
+              ? "bg-green-600"
               : notifStatus === "denied"
-              ? "🚫 Notifications BLOCKED"
-              : "🔔 Enable Notifications"}
-          </button>
-        )}
+              ? "bg-red-600"
+              : notifStatus === "unsupported"
+              ? "bg-gray-600"
+              : "bg-black hover:bg-gray-800"
+          }`}
+        >
+          {notifStatus === "granted"
+            ? "✅ Notifications ON"
+            : notifStatus === "denied"
+            ? "🚫 Notifications BLOCKED"
+            : notifStatus === "unsupported"
+            ? "⚠️ Notifications Not Supported"
+            : "🔔 Enable Notifications"}
+        </button>
 
         <h2 className="text-balance text-lg font-semibold text-foreground">Reflections</h2>
         <p className="text-xs text-muted-foreground">Journal moments that shape your aura</p>
@@ -154,27 +165,25 @@ export function ReflectionsPanel({ data }: { data: Data }) {
             className="w-full resize-none rounded-lg border border-border bg-input px-3 py-2 text-sm leading-relaxed text-foreground outline-none focus:border-primary"
           />
 
-          {/* حقل المنبه — بيظهر بس إذا المتصفح يدعم الإشعارات */}
-          {notifStatus !== "unsupported" && (
-            <div className="mt-3 flex items-center gap-3">
-              <div className="relative flex-1">
-                <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="datetime-local"
-                  value={reminderTime}
-                  onChange={(e) => setReminderTime(e.target.value)}
-                  min={toLocalDatetimeString(new Date())}
-                  className="w-full rounded-lg border border-border bg-input py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-primary"
-                />
-              </div>
-              {reminderTime && (
-                <div className="flex items-center gap-1 text-accent">
-                  <Bell className="h-4 w-4 animate-pulse" />
-                  <span className="text-[10px] font-medium">Alarm ON</span>
-                </div>
-              )}
+          {/* حقل المنبه — دايماً يظهر */}
+          <div className="mt-3 flex items-center gap-3">
+            <div className="relative flex-1">
+              <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="datetime-local"
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                min={toLocalDatetimeString(new Date())}
+                className="w-full rounded-lg border border-border bg-input py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-primary"
+              />
             </div>
-          )}
+            {reminderTime && (
+              <div className="flex items-center gap-1 text-accent">
+                <Bell className="h-4 w-4 animate-pulse" />
+                <span className="text-[10px] font-medium">Alarm ON</span>
+              </div>
+            )}
+          </div>
 
           <div className="mt-3 flex justify-end">
             <button
