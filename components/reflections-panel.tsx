@@ -95,7 +95,12 @@ export function ReflectionsPanel({ data }: { data: Data }) {
 
     // إذا اختار المستخدم وقتاً للمنبه
     if (reminderTime) {
+      
+      
       const hasPermission = await requestPermission()
+
+
+
       if (!hasPermission) {
         alert("لا يمكننا ضبط المنبه بدون السماح بالإشعارات!")
         return
@@ -122,6 +127,24 @@ export function ReflectionsPanel({ data }: { data: Data }) {
   return (
     <div className="flex h-full flex-col">
       <header className="border-b border-border/60 px-5 py-4">
+
+
+
+
+
+
+
+<button
+  type="button"
+  onClick={requestPermission}
+  className="mb-3 rounded-lg bg-black px-3 py-2 text-white text-sm"
+>
+  Enable Notifications
+</button>
+
+
+
+
         <h2 className="text-balance text-lg font-semibold text-foreground">Reflections</h2>
         <p className="text-xs text-muted-foreground">Journal moments that shape your aura</p>
       </header>
