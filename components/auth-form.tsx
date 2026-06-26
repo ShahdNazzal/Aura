@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client"
 import { AvatarSVG } from "@/components/avatar-svg"
 import { DEFAULT_AVATAR } from "@/lib/types"
 
+
 type Mode = "signin" | "signup"
 
 export function AuthForm() {
