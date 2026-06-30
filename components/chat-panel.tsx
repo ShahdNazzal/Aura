@@ -18,6 +18,7 @@ export function ChatPanel({
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<any>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const STORAGE_KEY = `aura-chat-${userId}`
 
@@ -53,6 +54,18 @@ export function ChatPanel({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, loading])
+
+
+
+
+
+useEffect(() => {
+  if (!textareaRef.current) return
+
+  textareaRef.current.style.height = "0px"
+  textareaRef.current.style.height =
+    textareaRef.current.scrollHeight + "px"
+}, [input])
 
   // ─── Voice recognition ────────────────────────────────────────────────────
   useEffect(() => {
@@ -111,7 +124,7 @@ export function ChatPanel({
     setLoading(false)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
@@ -222,15 +235,17 @@ export function ChatPanel({
 
       {/* ── Input ── */}
       <div className="px-4 pb-4 pt-3 border-t border-white/8 flex-shrink-0">
-        <div className="flex items-center gap-2 bg-white/6 border border-white/10 rounded-2xl px-4 py-2.5 focus-within:border-violet-500/50 transition-colors">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 outline-none"
-            placeholder="What are you working on today?"
-            disabled={loading}
-          />
+        <div className="flex items-end gap-2 bg-white/6 border border-white/10 rounded-2xl px-4 py-2.5 focus-within:border-violet-500/50 transition-colors">
+          <textarea
+  ref={textareaRef}
+  value={input}
+  onChange={(e) => setInput(e.target.value)}
+  onKeyDown={handleKeyDown}
+  rows={1}
+  placeholder="What are you working on today?"
+  disabled={loading}
+  className="flex-1 resize-none overflow-hidden bg-transparent text-sm text-white placeholder:text-white/30 outline-none leading-6 max-h-40"
+/>
           <button
             onClick={() => {
               if (!recognitionRef.current) return
