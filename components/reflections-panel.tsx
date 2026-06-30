@@ -1,4 +1,14 @@
+"use client"
 
+import { useState, useEffect, useRef } from "react"
+import { Trash2, Sparkles, Bell, Clock } from "lucide-react"
+import type { useAuraData } from "@/lib/use-aura-data"
+
+type Data = ReturnType<typeof useAuraData>
+
+const PROMPTS = [
+  "What gave you energy today?",
+  "What is one small win you can celebrate?",
   "What drained you, and why?",
   "What are you grateful for right now?",
   "What would your future self thank you for?",
