@@ -13,9 +13,6 @@ export async function POST(req: Request) {
 
     const userId: string = body.userId;
     const userMessage: string = body.text;
-
-    // history = مصفوفة الرسائل السابقة من الفرونت
-    // كل عنصر: { role: "user" | "bot", text: string }
     const history: { role: string; text: string }[] = body.history ?? [];
 
     if (!userMessage) {
@@ -41,7 +38,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // ─── Detect language & intent ────────────────────────────────────────────
     const isArabic = /[\u0600-\u06FF]/.test(userMessage);
 
     const wantsCard =
@@ -56,7 +52,6 @@ export async function POST(req: Request) {
         userMessage.includes("خطة") ||
         userMessage.includes("جدول"));
 
-    // ─── System prompt ────────────────────────────────────────────────────────
     const systemPrompt = `
 You are AURA, a warm and smart AI self-growth coach.
 
@@ -81,7 +76,7 @@ MEMORY RULE:
 
 CARD RULES:
 - ONLY create a card when user EXPLICITLY asks (says "create a card", "أنشئ كارد", etc.)
-- When creating a card, your ENTIRE reply must be ONLY this JSON (nothing else, no extra text):
+- When creating a card, your ENTIRE reply must be ONLY this JSON (nothing else, no extra text, no markdown fences):
 {
   "action": "create_card",
   "title": "short meaningful title",
@@ -90,31 +85,24 @@ CARD RULES:
   "tasks": [
     "Detailed actionable task 1",
     "Detailed actionable task 2",
-    "Detailed actionable task 3",
-    "...more tasks as needed"
+    "Detailed actionable task 3"
   ]
 }
 
-TASK RULES (CRITICAL):
-- tasks array must NEVER be empty
-- Minimum 5 tasks, maximum 12 tasks depending on topic complexity
-- Each task must be specific, actionable, and directly related to the card topic
-- Tasks must be ordered logically (beginner → advanced, or day 1 → day 7, etc.)
-- If topic is a schedule (gym, study, diet...) → create one task per day or session
-- If topic is a skill (meditation, reading...) → create progressive milestone tasks
-- If topic is a habit → create daily/weekly habit tasks with clear targets
-- Tasks must be written in the SAME language as the user
-- In Arabic cards: tasks in Arabic. In English cards: tasks in English.
+TASK RULES (CRITICAL — DO NOT SKIP):
+- "tasks" is REQUIRED and must NEVER be an empty array. This is the most important field in the whole JSON.
+- Write the tasks array FIRST in your head, then write the rest of the JSON around it.
+- Minimum 5 tasks, maximum 8 tasks. Keep each task short (under 15 words) so you don't run out of space.
+- Tasks must be specific, actionable, ordered logically.
+- Tasks must be written in the SAME language as the user.
 
 EXAMPLE - Gym schedule card tasks:
-["يوم الأحد: تمارين الصدر والترايسبس (45 دقيقة)", "يوم الثلاثاء: تمارين الظهر والبايسبس (45 دقيقة)", "يوم الأربعاء: تمارين الكارديو والأكتاف (30 دقيقة)", "يوم الخميس: تمارين الأرجل والكور (45 دقيقة)", "يوم السبت: تمارين كاملة للجسم أو يوم راحة نشطة", "شرب 3 لترات ماء يومياً", "النوم 7-8 ساعات لتعافي العضلات", "تسجيل التقدم الأسبوعي في دفتر أو تطبيق"]
+["يوم الأحد: تمارين الصدر والترايسبس (45 دقيقة)", "يوم الثلاثاء: تمارين الظهر والبايسبس (45 دقيقة)", "يوم الأربعاء: كارديو وأكتاف (30 دقيقة)", "يوم الخميس: أرجل وكور (45 دقيقة)", "شرب 3 لترات ماء يومياً", "النوم 7-8 ساعات", "تسجيل التقدم أسبوعياً"]
 
 - In all other cases → reply in normal human-readable text only
 - If a plan/schedule is suitable → suggest creating a card but do NOT create it
 `;
 
-    // ─── بناء تاريخ المحادثة للـ API ─────────────────────────────────────────
-    // نأخذ آخر 20 رسالة فقط عشان ما نتجاوز حد الـ tokens
     const recentHistory = history.slice(-20);
 
     const conversationMessages = recentHistory.map((msg) => ({
@@ -122,7 +110,6 @@ EXAMPLE - Gym schedule card tasks:
       content: msg.text,
     }));
 
-    // ─── استدعاء الـ AI ───────────────────────────────────────────────────────
     const response = await client.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
@@ -131,9 +118,13 @@ EXAMPLE - Gym schedule card tasks:
         { role: "user", content: userMessage },
       ],
       temperature: 0.6,
+      max_tokens: 2048, // مهم: كان مفقود، وممكن يكون السبب الرئيسي لقص الـ tasks
     });
 
     let aiMessage = response.choices?.[0]?.message?.content?.trim() || "";
+
+    // ─── تشخيص: اطبع الرد الخام دايماً بالـ terminal ─────────────────────────
+    console.log("=== RAW AI RESPONSE ===\n", aiMessage, "\n=======================");
 
     // ─── استخراج وحفظ الذاكرة ────────────────────────────────────────────────
     const memoryMatch = aiMessage.match(/<memory>([\s\S]*?)<\/memory>/);
@@ -153,15 +144,51 @@ EXAMPLE - Gym schedule card tasks:
 
     // ─── محاولة Parse JSON (للكارد) ──────────────────────────────────────────
     let parsed: any = null;
+    let parseError: string | null = null;
     try {
       const jsonMatch = aiMessage.match(/\{[\s\S]*\}/);
       if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-    } catch {
+    } catch (e: any) {
       parsed = null;
+      parseError = e?.message ?? "unknown parse error";
+      console.log("=== JSON PARSE FAILED ===\n", parseError);
     }
 
     // ─── إنشاء الكارد ────────────────────────────────────────────────────────
     if (parsed?.action === "create_card" && wantsCard) {
+      // fallback: لو الموديل رجع tasks فاضية أو ناقصة، اطلبها بطلب منفصل ومركّز
+      let tasks: string[] = Array.isArray(parsed.tasks) ? parsed.tasks : [];
+
+      if (tasks.length === 0) {
+        console.log("=== tasks EMPTY, requesting a dedicated tasks-only call ===");
+        try {
+          const tasksRetry = await client.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              {
+                role: "system",
+                content: isArabic
+                  ? `أعطني فقط مصفوفة JSON من 5 إلى 8 تاسكات (نصوص قصيرة وعملية) لكارد بعنوان "${parsed.title}" ووصفه: "${parsed.description}". رجاوبني بس بمصفوفة JSON متل هيك: ["task1", "task2", ...] بدون أي كلام إضافي.`
+                  : `Give me only a JSON array of 5 to 8 short actionable tasks for a card titled "${parsed.title}" with description: "${parsed.description}". Reply ONLY with a JSON array like: ["task1", "task2", ...] with no extra text.`,
+              },
+            ],
+            temperature: 0.5,
+            max_tokens: 800,
+          });
+
+          const retryText = tasksRetry.choices?.[0]?.message?.content?.trim() || "";
+          const arrMatch = retryText.match(/\[[\s\S]*\]/);
+          if (arrMatch) {
+            const retryTasks = JSON.parse(arrMatch[0]);
+            if (Array.isArray(retryTasks) && retryTasks.length > 0) {
+              tasks = retryTasks;
+            }
+          }
+        } catch (e) {
+          console.log("=== tasks retry failed ===", e);
+        }
+      }
+
       const { data: newCard, error } = await supabaseAdmin
         .from("cards")
         .insert({
@@ -175,17 +202,19 @@ EXAMPLE - Gym schedule card tasks:
 
       if (error) throw error;
 
-      if (parsed.tasks?.length) {
-        await supabaseAdmin.from("tasks").insert(
-          parsed.tasks.map((t: string) => ({
+      if (tasks.length) {
+        const { error: tasksError } = await supabaseAdmin.from("tasks").insert(
+          tasks.map((t: string) => ({
             card_id: newCard.id,
             text: t,
             is_done: false,
           }))
         );
+        if (tasksError) console.log("=== tasks insert error ===", tasksError);
+      } else {
+        console.log("=== NO TASKS EVEN AFTER RETRY ===");
       }
 
-      // جلب الكارد كاملة مع التاسكات عشان تظهر فوراً بالفرونت
       const { data: fullCard } = await supabaseAdmin
         .from("cards")
         .select("*, tasks(*)")
@@ -200,14 +229,12 @@ EXAMPLE - Gym schedule card tasks:
       });
     }
 
-    // ─── لو الـ AI رجع JSON بدون طلب كارد → حوّله لرسالة طبيعية ────────────
     if (parsed?.action || (parsed && !aiMessage.replace(/\{[\s\S]*\}/, "").trim())) {
       aiMessage = isArabic
         ? "عذراً، حدث خطأ في الرد. هل يمكنك إعادة السؤال؟"
         : "Sorry, something went wrong with my response. Could you rephrase?";
     }
 
-    // ─── اقتراح كارد بدون إنشاء ──────────────────────────────────────────────
     if (suggestCard) {
       aiMessage += isArabic
         ? "\n\n💡 هل تريد أحول هذا إلى كارد؟ قل لي \"أنشئ كارد\" وسأضيفها فوراً."

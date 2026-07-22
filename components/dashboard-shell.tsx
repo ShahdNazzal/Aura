@@ -1,5 +1,10 @@
 "use client"
 
+
+
+//C:\Users\lenovo\Desktop\build-aura-gamified-platform\components\dashboard-shell.tsx
+
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, X } from "lucide-react"
@@ -30,8 +35,9 @@ export function DashboardShell({ userId, email }: { userId: string; email: strin
   }
 
   function handleNewCard(card: LifeCard) {
-    data.addLiveCard(card)
-  }
+  data.addLiveCard(card)
+  data.refresh()
+}
 
   async function signOut() {
     const supabase = createClient()
