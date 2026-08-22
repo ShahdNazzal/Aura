@@ -358,12 +358,35 @@ function CardItem({
                   : undefined
               }
             >
+              {/* مقبض السحب: شغال بالماوس على الديسكتوب، وظاهر دايماً على الموبايل كإشارة بصرية */}
               <span
-                className="shrink-0 cursor-grab text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 active:cursor-grabbing"
+                className="hidden shrink-0 cursor-grab text-muted-foreground/50 transition active:cursor-grabbing sm:block sm:opacity-0 sm:group-hover:opacity-100"
                 aria-hidden
               >
                 <GripVertical className="h-3.5 w-3.5" />
               </span>
+
+              {/* أزرار فوق/تحت: هاي اللي بتشتغل فعلياً على الموبايل لأنه drag & drop العادي ما بيشتغل باللمس */}
+              <div className="flex shrink-0 flex-col">
+                <button
+                  type="button"
+                  onClick={() => moveTask(task.id, "up")}
+                  disabled={index === 0}
+                  aria-label="Move task up"
+                  className="rounded p-0.5 text-muted-foreground transition hover:text-foreground disabled:opacity-20 disabled:hover:text-muted-foreground"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveTask(task.id, "down")}
+                  disabled={index === orderedTasks.length - 1}
+                  aria-label="Move task down"
+                  className="rounded p-0.5 text-muted-foreground transition hover:text-foreground disabled:opacity-20 disabled:hover:text-muted-foreground"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </div>
 
               <button
                 type="button"
@@ -408,7 +431,7 @@ function CardItem({
               <button
                 type="button"
                 onClick={() => onDeleteTask(task.id)}
-                className="shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                className="shrink-0 text-muted-foreground opacity-100 transition hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                 aria-label="Delete task"
               >
                 <X className="h-3.5 w-3.5" />
