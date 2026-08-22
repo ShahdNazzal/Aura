@@ -3,7 +3,7 @@
 // C:\Users\lenovo\Downloads\build-aura-gamified-platform\components\cards-panel.tsx
 
 import { useEffect, useRef, useState } from "react"
-import { Plus, Trash2, Check, X, Circle, CheckCircle2, GripVertical, Rocket } from "lucide-react"
+import { Plus, Trash2, Check, X, Circle, CheckCircle2, GripVertical, Rocket, ChevronUp, ChevronDown } from "lucide-react"
 import { CATEGORY_COLORS, type CardCategory, type LifeCard } from "@/lib/types"
 import type { useAuraData } from "@/lib/use-aura-data"
 
@@ -241,6 +241,17 @@ function CardItem({
   function commitReorder(next: LifeTask[]) {
     setOrderedTasks(next)
     onReorderTasks(next.map((t) => t.id))
+  }
+
+  function moveTask(taskId: string, direction: "up" | "down") {
+    const current = [...orderedTasks]
+    const index = current.findIndex((t) => t.id === taskId)
+    if (index === -1) return
+    const targetIndex = direction === "up" ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= current.length) return
+    const [moved] = current.splice(index, 1)
+    current.splice(targetIndex, 0, moved)
+    commitReorder(current)
   }
 
   function handleDrop(targetId: string) {

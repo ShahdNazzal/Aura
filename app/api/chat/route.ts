@@ -111,7 +111,7 @@ EXAMPLE - Gym schedule card tasks:
     }));
 
     const response = await client.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b", // أقوى، بديل مباشر لـ llama-3.3-70b
       messages: [
         { role: "system", content: systemPrompt },
         ...conversationMessages,

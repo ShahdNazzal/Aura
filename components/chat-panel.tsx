@@ -171,9 +171,9 @@ useEffect(() => {
 
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-6">
-            <div className="w-12 h-12 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-xl">
+            <span className="w-12 h-12 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-xl" aria-hidden="true">
               ✦
-            </div>
+            </span>
             <p className="text-xs text-white/30 leading-relaxed max-w-xs">
               Ask about goals, habits, mindset, or anything that helps you grow.
             </p>
