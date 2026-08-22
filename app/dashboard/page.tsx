@@ -1,3 +1,4 @@
+//C:\Users\lenovo\Desktop\build-aura-gamified-platform\app\dashboard\page.tsx
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { DashboardShell } from "@/components/dashboard-shell"

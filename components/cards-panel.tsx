@@ -2,12 +2,14 @@
 
 // C:\Users\lenovo\Downloads\build-aura-gamified-platform\components\cards-panel.tsx
 
-import { useState } from "react"
-import { Plus, Trash2, Check, X, Circle, CheckCircle2 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Plus, Trash2, Check, X, Circle, CheckCircle2, GripVertical, Rocket } from "lucide-react"
 import { CATEGORY_COLORS, type CardCategory, type LifeCard } from "@/lib/types"
 import type { useAuraData } from "@/lib/use-aura-data"
 
 type Data = ReturnType<typeof useAuraData>
+// بنشتق نوع التاسك من نوع الكارد نفسه، بدل ما نستورد نوع غير موجود جوا lib/types
+type LifeTask = NonNullable<LifeCard["tasks"]>[number]
 
 const CATEGORIES: CardCategory[] = ["mind", "body", "soul", "habits", "lifestyle", "custom"]
 
@@ -25,6 +27,8 @@ export function CardsPanel({
   onDeleteLiveCard?: (cardId: string) => void
 }) {
   const { cards, createCard, deleteCard, addTask, toggleTask, deleteTask } = data
+  // reorderTasks اختيارية: لسا ما انضافت لـ useAuraData، فبنعملها optional حتى ما توقع الكود
+  const reorderTasks = (data as { reorderTasks?: (cardId: string, orderedIds: string[]) => void }).reorderTasks
 
   async function handleDelete(cardId: string) {
     await deleteCard(cardId)
@@ -38,9 +42,9 @@ export function CardsPanel({
 
   // دمج الكروت الجديدة مع الكروت من Supabase بدون تكرار
   const mergedCards: LifeCard[] = [
-  ...cards,
-  ...liveCards.filter((l) => !cards.find((c) => c.id === l.id)),
-]
+    ...cards,
+    ...liveCards.filter((l) => !cards.find((c) => c.id === l.id)),
+  ]
 
   async function submitCard(e: React.FormEvent) {
     e.preventDefault()
@@ -61,6 +65,24 @@ export function CardsPanel({
 
   return (
     <div className="flex h-full flex-col">
+      {/* أنيميشن التاسك الأولى: نطة بسيطة لما توصل للصدارة + توهج مستمر بعدها */}
+      <style>{`
+        @keyframes taskFirstPop {
+          0%   { transform: scale(0.82) translateY(4px); }
+          45%  { transform: scale(1.06) translateY(-2px); }
+          70%  { transform: scale(0.97) translateY(0); }
+          100% { transform: scale(1) translateY(0); }
+        }
+        @keyframes taskGlowPulse {
+          0%, 100% { box-shadow: 0 0 8px var(--glow-color), 0 0 0px var(--glow-color) inset; }
+          50%      { box-shadow: 0 0 18px var(--glow-color), 0 0 3px var(--glow-color) inset; }
+        }
+        .task-first-pop {
+          animation: taskFirstPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                     taskGlowPulse 2.2s ease-in-out 0.5s infinite;
+        }
+      `}</style>
+
       <header className="flex items-center justify-between border-b border-border/60 px-5 py-4">
         <div>
           <h2 className="text-balance text-lg font-semibold text-foreground">Life Cards</h2>
@@ -147,6 +169,7 @@ export function CardsPanel({
               toggleTask(card.id, taskId, !task?.is_done)
             }}
             onDeleteTask={(taskId) => deleteTask(card.id, taskId)}
+            onReorderTasks={(orderedIds) => reorderTasks?.(card.id, orderedIds)}
             taskInput={taskInputs[card.id] ?? ""}
             onTaskInput={(v) => setTaskInputs((p) => ({ ...p, [card.id]: v }))}
             onAddTask={() => submitTask(card.id)}
@@ -158,13 +181,13 @@ export function CardsPanel({
   )
 }
 
-
 function CardItem({
   card,
   highlighted,
   onDelete,
   onToggleTask,
   onDeleteTask,
+  onReorderTasks,
   taskInput,
   onTaskInput,
   onAddTask,
@@ -175,12 +198,67 @@ function CardItem({
   onDelete: () => void
   onToggleTask: (taskId: string) => void
   onDeleteTask: (taskId: string) => void
+  onReorderTasks: (orderedIds: string[]) => void
   taskInput: string
   onTaskInput: (v: string) => void
   onAddTask: () => void
   onFocus: () => void
 }) {
   const color = CATEGORY_COLORS[card.category] ?? "#8a99b3"
+
+  // ترتيب محلي للتاسكات (بيبقى متزامن مع الداتا الجاية من فوق، بس بيسمح بالسحب والإفلات فورياً)
+  const [orderedTasks, setOrderedTasks] = useState<LifeTask[]>(card.tasks ?? [])
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+
+  // نتابع مين كانت أول تاسك، عشان نشغّل الأنيميشن بس لما وحدة جديدة توصل للصدارة
+  const prevFirstId = useRef<string | null>(null)
+  const [justPromotedId, setJustPromotedId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const incoming = card.tasks ?? []
+    setOrderedTasks((current) => {
+      // نحافظ على ترتيب المستخدم الحالي، ونضيف أي تاسك جديدة بالآخر، ونشيل المحذوفة
+      const incomingIds = new Set(incoming.map((t) => t.id))
+      const kept = current.filter((t) => incomingIds.has(t.id)).map((t) => incoming.find((i) => i.id === t.id)!)
+      const keptIds = new Set(kept.map((t) => t.id))
+      const added = incoming.filter((t) => !keptIds.has(t.id))
+      return [...kept, ...added]
+    })
+  }, [card.tasks])
+
+  useEffect(() => {
+    const newFirstId = orderedTasks[0]?.id ?? null
+    if (newFirstId && newFirstId !== prevFirstId.current) {
+      setJustPromotedId(newFirstId)
+      const t = setTimeout(() => setJustPromotedId(null), 600)
+      prevFirstId.current = newFirstId
+      return () => clearTimeout(t)
+    }
+    prevFirstId.current = newFirstId
+  }, [orderedTasks])
+
+  function commitReorder(next: LifeTask[]) {
+    setOrderedTasks(next)
+    onReorderTasks(next.map((t) => t.id))
+  }
+
+  function handleDrop(targetId: string) {
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null)
+      setDragOverId(null)
+      return
+    }
+    const current = [...orderedTasks]
+    const fromIndex = current.findIndex((t) => t.id === draggedId)
+    const toIndex = current.findIndex((t) => t.id === targetId)
+    if (fromIndex === -1 || toIndex === -1) return
+    const [moved] = current.splice(fromIndex, 1)
+    current.splice(toIndex, 0, moved)
+    commitReorder(current)
+    setDraggedId(null)
+    setDragOverId(null)
+  }
 
   return (
     <div
@@ -237,37 +315,96 @@ function CardItem({
       </div>
 
       <ul className="mt-3 space-y-1.5">
-        {(card.tasks ?? []).map((task) => (
-          <li key={task.id} className="group flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onToggleTask(task.id)}
-              className="shrink-0 text-muted-foreground transition hover:text-foreground"
-              aria-label={task.is_done ? "Mark incomplete" : "Mark complete"}
+        {orderedTasks.map((task, index) => {
+          const isFirst = index === 0
+          const isDragging = draggedId === task.id
+          const isDragOver = dragOverId === task.id && draggedId !== task.id
+
+          return (
+            <li
+              key={task.id}
+              draggable
+              onDragStart={() => setDraggedId(task.id)}
+              onDragOver={(e) => {
+                e.preventDefault()
+                if (dragOverId !== task.id) setDragOverId(task.id)
+              }}
+              onDragLeave={() => setDragOverId((cur) => (cur === task.id ? null : cur))}
+              onDrop={(e) => {
+                e.preventDefault()
+                handleDrop(task.id)
+              }}
+              onDragEnd={() => {
+                setDraggedId(null)
+                setDragOverId(null)
+              }}
+              className={`group flex items-center gap-2 rounded-lg px-1.5 py-1 transition ${
+                isDragging ? "opacity-40" : ""
+              } ${isDragOver ? "bg-secondary/60" : ""}`}
+              style={
+                isFirst && !task.is_done
+                  ? ({ "--glow-color": `${color}` } as React.CSSProperties)
+                  : undefined
+              }
             >
-              {task.is_done ? (
-                <CheckCircle2 className="h-4 w-4" style={{ color }} />
-              ) : (
-                <Circle className="h-4 w-4" />
-              )}
-            </button>
-            <span
-              className={`flex-1 text-sm ${
-                task.is_done ? "text-muted-foreground line-through" : "text-foreground"
-              }`}
-            >
-              {task.text}
-            </span>
-            <button
-              type="button"
-              onClick={() => onDeleteTask(task.id)}
-              className="shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-              aria-label="Delete task"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </li>
-        ))}
+              <span
+                className="shrink-0 cursor-grab text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 active:cursor-grabbing"
+                aria-hidden
+              >
+                <GripVertical className="h-3.5 w-3.5" />
+              </span>
+
+              <button
+                type="button"
+                onClick={() => onToggleTask(task.id)}
+                className="shrink-0 text-muted-foreground transition hover:text-foreground"
+                aria-label={task.is_done ? "Mark incomplete" : "Mark complete"}
+              >
+                {task.is_done ? (
+                  <CheckCircle2 className="h-4 w-4" style={{ color }} />
+                ) : isFirst ? (
+                  <Rocket className="h-4 w-4" style={{ color }} />
+                ) : (
+                  <Circle className="h-4 w-4" />
+                )}
+              </button>
+
+              <span
+                className={`flex-1 flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm transition ${
+                  task.is_done
+                    ? "text-muted-foreground line-through"
+                    : isFirst
+                      ? `font-semibold text-foreground ${justPromotedId === task.id ? "task-first-pop" : ""}`
+                      : "text-foreground"
+                }`}
+                style={
+                  isFirst && !task.is_done
+                    ? { border: `1px solid ${color}55`, backgroundColor: `${color}14` }
+                    : undefined
+                }
+              >
+                {task.text}
+                {isFirst && !task.is_done && (
+                  <span
+                    className="font-mono-label shrink-0 rounded-full px-1.5 py-0.5 text-[9px]"
+                    style={{ color, backgroundColor: `${color}22` }}
+                  >
+                    ابدأ من هون
+                  </span>
+                )}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => onDeleteTask(task.id)}
+                className="shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                aria-label="Delete task"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          )
+        })}
       </ul>
 
       <div className="mt-2 flex items-center gap-2">
@@ -296,4 +433,3 @@ function CardItem({
     </div>
   )
 }
-
