@@ -60,7 +60,7 @@ UI.png → Main interface preview
 ## 🔗 Deployment
 
 Deployed using vercal : 
-[https://aura-lac-three.vercel.app/](https://aura-forge-ai.vercel.app/)
+[https://aura-lac-three.vercel.app/]([https://aura-forge-ai.vercel.app/](https://aura-forge.netlify.app/))
 
 ---
 
