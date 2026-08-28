@@ -2,7 +2,7 @@
 
 Aura is an interactive self-growth web app that visualizes personal progress through dynamic life cards and an evolving digital avatar that reflects the user’s habits, goals, and transformation in real time.
 
-🌐 Live Website: https://aura-lac-three.vercel.app/
+🌐 Live Website: https://aura-forge.netlify.app/
 
 ---
 
@@ -59,8 +59,8 @@ UI.png → Main interface preview
 
 ## 🔗 Deployment
 
-Deployed using vercal : 
-[https://aura-lac-three.vercel.app/]([https://aura-forge-ai.vercel.app/](https://aura-forge.netlify.app/))
+Deployed using netlify: 
+https://aura-forge.netlify.app/
 
 ---
 
